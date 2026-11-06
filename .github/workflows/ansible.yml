@@ -1,0 +1,115 @@
+name: Ansible
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-roles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: ansible-galaxy role install -r requirements.yml -p .ansible/roles
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ansible-roles
+          path: .ansible/roles
+          include-hidden-files: true
+          if-no-files-found: error
+
+  prepare-collections:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: ansible-galaxy collection install -r requirements.yml -p .ansible/collections
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ansible-collections
+          path: .ansible/collections
+          include-hidden-files: true
+          if-no-files-found: error
+
+  render:
+    needs: [prepare-roles, prepare-collections]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: ansible-roles
+          path: .ansible/roles
+      - uses: actions/download-artifact@v4
+        with:
+          name: ansible-collections
+          path: .ansible/collections
+      - run: ansible-inventory --graph && ansible-playbook playbook.yml --syntax-check
+      - run: ansible-playbook playbook.yml --tags render -e ansible_python_interpreter=$(which python)
+      - name: Validate generated Nginx configuration
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y nginx
+          for config in "$GITHUB_WORKSPACE"/artifacts/*/nginx.conf; do
+            sudo nginx -t -c "$config"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nginx-configs
+          path: artifacts/
+          if-no-files-found: error
+
+  ping:
+    if: github.event_name != 'pull_request' && vars.ANSIBLE_ENABLED == 'true'
+    needs: [render]
+    runs-on: [self-hosted, linux, ansible-network]
+    timeout-minutes: 10
+    env:
+      ANSIBLE_REMOTE_USER: ${{ vars.ANSIBLE_REMOTE_USER }}
+      ANSIBLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/ansible-${{ github.run_id }}.key
+      ANSIBLE_SSH_ARGS: -o UserKnownHostsFile=${{ runner.temp }}/known-hosts-${{ github.run_id }} -o StrictHostKeyChecking=yes -o ConnectTimeout=10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m venv "$RUNNER_TEMP/ansible-venv" && "$RUNNER_TEMP/ansible-venv/bin/pip" install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: ansible-roles
+          path: .ansible/roles
+      - uses: actions/download-artifact@v4
+        with:
+          name: ansible-collections
+          path: .ansible/collections
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ANSIBLE_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS" && test -n "$ANSIBLE_REMOTE_USER"
+          umask 077
+          printf '%s\n' "$SSH_KEY" > "$ANSIBLE_PRIVATE_KEY_FILE"
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known-hosts-$GITHUB_RUN_ID"
+      - run: '"$RUNNER_TEMP/ansible-venv/bin/ansible-playbook" playbook.yml --tags ping'
+      - name: Remove SSH credentials
+        if: always()
+        run: rm -f "$ANSIBLE_PRIVATE_KEY_FILE" "$RUNNER_TEMP/known-hosts-$GITHUB_RUN_ID"

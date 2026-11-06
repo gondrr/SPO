@@ -1,0 +1,6 @@
+.workspace-repos/
+.ansible/
+artifacts/
+__pycache__/
+*.retry
+.venv/

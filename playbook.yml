@@ -1,0 +1,16 @@
+---
+- name: Check Kubernetes hosts over SSH
+  hosts: k8s
+  gather_facts: false
+  tags: [ping]
+  tasks:
+    - name: Check SSH and remote Python
+      ansible.builtin.ping:
+
+- name: Generate Nginx configuration on the controller
+  hosts: k8s
+  connection: local
+  gather_facts: false
+  tags: [render]
+  roles:
+    - first_ansible_role

@@ -1,0 +1,9 @@
+---
+nginx_listen_port: 8080
+nginx_server_name: "{{ inventory_hostname }}.example.internal"
+nginx_worker_processes: auto
+nginx_worker_connections: 1024
+nginx_access_log: /var/log/nginx/access.log
+nginx_error_log: /var/log/nginx/error.log
+nginx_document_root: /usr/share/nginx/html
+nginx_artifact_root: "{{ playbook_dir }}/artifacts"

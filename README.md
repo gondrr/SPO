@@ -1,7 +1,7 @@
 # Ansible: первое приложение на GitHub
 
 Основной репозиторий: https://github.com/gondrr/SPO (ветки `main`, `dev`).
-Задание адаптировано с GitLab CI на GitHub Actions.
+Автоматизация выполняется через GitHub Actions.
 
 ## Структура и этапы
 
@@ -9,8 +9,8 @@
 - `group_vars/k8s.yml` — настройки конфигурации для группы серверов.
 - `playbook.yml` — SSH ping и отдельный локальный рендер конфигураций.
 - `requirements.yml` — роль https://github.com/gondrr/first-ansible-role,
-  тег `v1.0.0`, и коллекция `ansible.utils` для проверки IP.
-- `.github/workflows/ansible.yml` — аналог `.gitlab-ci.yml`.
+  тег `v1.0.1`, и коллекция `ansible.utils` для проверки IP.
+- `.github/workflows/ansible.yml` — workflow CI/CD для обоих этапов.
 
 Этап 1 реализован первым play: `ansible.builtin.ping` проверяет SSH и Python
 на 10.160.161.184 и 10.160.161.185 (это не ICMP ping).

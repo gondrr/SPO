@@ -82,8 +82,8 @@ jobs:
     timeout-minutes: 10
     env:
       ANSIBLE_REMOTE_USER: ${{ vars.ANSIBLE_REMOTE_USER }}
-      ANSIBLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/ansible-${{ github.run_id }}.key
-      ANSIBLE_SSH_ARGS: -o UserKnownHostsFile=${{ runner.temp }}/known-hosts-${{ github.run_id }} -o StrictHostKeyChecking=yes -o ConnectTimeout=10
+      ANSIBLE_PRIVATE_KEY_FILE: ${{ github.workspace }}/.ansible/ssh-key
+      ANSIBLE_SSH_ARGS: -o UserKnownHostsFile=${{ github.workspace }}/.ansible/known-hosts -o StrictHostKeyChecking=yes -o ConnectTimeout=10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -108,8 +108,8 @@ jobs:
           test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS" && test -n "$ANSIBLE_REMOTE_USER"
           umask 077
           printf '%s\n' "$SSH_KEY" > "$ANSIBLE_PRIVATE_KEY_FILE"
-          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known-hosts-$GITHUB_RUN_ID"
+          printf '%s\n' "$KNOWN_HOSTS" > "$GITHUB_WORKSPACE/.ansible/known-hosts"
       - run: '"$RUNNER_TEMP/ansible-venv/bin/ansible-playbook" playbook.yml --tags ping'
       - name: Remove SSH credentials
         if: always()
-        run: rm -f "$ANSIBLE_PRIVATE_KEY_FILE" "$RUNNER_TEMP/known-hosts-$GITHUB_RUN_ID"
+        run: rm -f "$ANSIBLE_PRIVATE_KEY_FILE" "$GITHUB_WORKSPACE/.ansible/known-hosts"

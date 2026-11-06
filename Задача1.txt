@@ -8,27 +8,27 @@
 
 Этап 1. Базовые сущности и первая автоматизация (Ansible + CI/CD)
 
-Цель: Понять, как Ansible узнаёт, куда подключаться, где хранит переменные, как выполняет команды и как всё это интегрировать в GitLab CI.
+Цель: Понять, как Ansible узнаёт, куда подключаться, где хранит переменные, как выполняет команды и как всё это интегрировать в GitHub Actions.
 
 Что нужно сделать:
 
-1. Создай репозиторий в нашем корпоративном GitLab  (gitlab.cstlab.ru)  по пути:
+1. Создай репозиторий на GitHub по адресу:
 
-sandbox/<your surname>/ansible-first-app.
+https://github.com/<your-account>/ansible-first-app.
 
-2. Создай базовую структуру файлов в ansible-first-app:
+2. Создай базовую структуру файлов в основном репозитории (в текущем решении — gondrr/SPO):
 
 group_vars/ — директория для групповых переменных. Здесь будут лежать специфичные настройки для групп серверов из инвентори.
 
 inventory.yml
 
-.gitlab-ci.yml - входной файл для cicd
+.github/workflows/ansible.yml - входной файл для cicd
 
 playbook.yml — твой первый сценарий. Здесь ты описываешь, что именно нужно сделать на целевых машинах.
 
-3. Напиши CI/CD пайплайн (.gitlab-ci.yml):
+3. Напиши CI/CD пайплайн (.github/workflows/ansible.yml):
 
-Создай джобу, которая будет запускать твой плейбук. Например, job ping, stage ansible.
+Создай джобу, которая будет запускать твой плейбук. Например, job ping; зависимости между jobs задавай через needs.
 
 4. Напиши плейбук (playbook.yml)
 
@@ -48,15 +48,15 @@ ip-адреса тачек k8s: 10.160.161.184 и 10.160.161.185
 
 Инвентарь не должен лежать прямо в репозитории с кодом, так как инфраструктура общая для многих проектов.
 
-Вынеси inventory в отдельный репозиторий по пути cstlab/sandbox/<your surname>/inventory
+Вынеси inventory в отдельный репозиторий по пути https://github.com/<your-account>/inventory
 
-Подключи эту репу с инвентарем к своему основному репозиторию с помощью git submodule. Учти, что gitlab поддерживает сабмодули из коробки. https://docs.gitlab.com/ci/runners/git_submodules/
+Подключи эту репу с инвентарем к своему основному репозиторию с помощью git submodule. В GitHub Actions включи submodules: recursive в actions/checkout. https://github.com/actions/checkout#checkout-submodules
 
 2. Роли как функции (Roles):
 
 Роль в Ansible — это как функция в программировании: она принимает переменные на вход и выполняет изолированный кусок логики.
 
-Создай Ansible-роль и вынеси в отдельный репозиторий по пути cstlab/sandbox/<your surname>/ansible-roles/first-ansible-role
+Создай Ansible-роль и вынеси в отдельный репозиторий по пути https://github.com/<your-account>/first-ansible-role
 
 В основном репозитории, где находится твой ci и playbook, создай файл requirements.yml и подключи через него свою новую роль, а также необходимые внешние модули/коллекции Ansible.
 
@@ -64,9 +64,9 @@ ip-адреса тачек k8s: 10.160.161.184 и 10.160.161.185
 
 Теперь перед запуском плейбука нужно скачивать зависимости (роли и модули).
 
-Сделай скачивание ролей и коллекций (через ansible-galaxy install -r requirements.yml) отдельными джобами (например, для stage prepare).
+Сделай скачивание ролей и коллекций (через ansible-galaxy install -r requirements.yml) отдельными джобами (например, prepare-roles и prepare-collections).
 
-Передавай скачанные роли и модули в основную джобу Ansible через gitlab artifacts.
+Передавай скачанные роли и модули в основную джобу Ansible через actions/upload-artifact и actions/download-artifact.
 
 4. Шаблонизация (Jinja2 Templates):
 
